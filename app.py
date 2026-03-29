@@ -24,6 +24,13 @@ import struct
 import zlib
 import random
 
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Cyberverse is running 🚀"
 # Try to import additional modules for steganography
 try:
     from PIL import Image
