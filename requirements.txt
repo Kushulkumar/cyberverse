@@ -10,3 +10,9 @@ pycryptodome==3.19.0
 numpy==1.24.3
 opencv-python-headless==4.8.1.78
 scapy==2.5.0
+flask
+gunicorn
+requests
+numpy
+scapy
+opencv-python-headless
