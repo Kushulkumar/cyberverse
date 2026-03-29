@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CyberVerse | Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; transition: background 0.3s, color 0.3s; }
+        
+        body.light-mode {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            color: #1a1a2e;
+        }
+        body.light-mode .cyber-card { background: rgba(255,255,255,0.9); border-color: #00aaff; color: #1a1a2e; }
+        body.light-mode .cyber-input { background: rgba(255,255,255,0.9); color: #1a1a2e; border-color: #00aaff; }
+        body.light-mode .nav-link { color: #666; }
+        body.light-mode .nav-link.active { color: #00aaff; }
+        body.light-mode .text-gray-400 { color: #666; }
+        body.light-mode .text-gray-300 { color: #444; }
+        body.light-mode .bg-black\/30 { background: rgba(0,0,0,0.05); }
+        body.light-mode .modal-content { background: linear-gradient(135deg, #ffffff, #f0f0f0); border-color: #00aaff; }
+        body.light-mode ::-webkit-scrollbar-track { background: #e0e0e0; }
+        body.light-mode ::-webkit-scrollbar-thumb { background: #00aaff; }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0a0a0f 0%, #0a0a1a 100%);
+            color: #e0e0e0;
+        }
+        
+        .cyber-font { font-family: 'Orbitron', monospace; }
+        
+        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.2; pointer-events: none; }
+        body.light-mode #matrix-canvas { opacity: 0.05; }
+        
+        @keyframes glowPulse { 0%,100% { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; } 50% { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; } }
+        @keyframes borderGlow { 0%,100% { border-color: rgba(0,255,255,0.3); box-shadow: 0 0 20px rgba(0,255,255,0.1); } 50% { border-color: rgba(0,255,255,0.8); box-shadow: 0 0 40px rgba(0,255,255,0.3); } }
+        
+        .glow-text { animation: glowPulse 2s ease-in-out infinite; }
+        
+        .cyber-card {
+            background: rgba(10,10,20,0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0,255,255,0.3);
+            border-radius: 20px; transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .cyber-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent); transition: left 0.5s ease; }
+        .cyber-card:hover::before { left: 100%; }
+        .cyber-card:hover { transform: translateY(-5px); border-color: #00ffff; box-shadow: 0 0 30px rgba(0,255,255,0.2); }
+        
+        .tool-card { cursor: pointer; }
+        .tool-card:hover { transform: translateY(-10px) scale(1.02); border-color: #00ffff; box-shadow: 0 0 50px rgba(0,255,255,0.3); }
+        
+        .tool-icon { background: linear-gradient(135deg, #00ffff, #ff00ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .cyber-input {
+            background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,255,0.3); border-radius: 12px;
+            padding: 12px 16px; color: white; font-family: 'Inter', sans-serif; transition: all 0.3s ease; width: 100%;
+        }
+        .cyber-input:focus { border-color: #00ffff; box-shadow: 0 0 20px rgba(0,255,255,0.3); outline: none; }
+        
+        .cyber-button {
+            background: linear-gradient(135deg, #00ffff, #0066ff); border: none; border-radius: 12px;
+            padding: 12px 24px; font-weight: 600; font-family: 'Inter', sans-serif; color: white;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .cyber-button:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(0,255,255,0.5); }
+        
+        .nav-link { cursor: pointer; position: relative; transition: all 0.3s ease; color: white; }
+        .nav-link.active { color: #00ffff; }
+        .nav-link.active::after { content: ''; position: absolute; bottom: -8px; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, #00ffff, #ff00ff); animation: slideUnderline 0.3s ease; }
+        @keyframes slideUnderline { from { width: 0; } to { width: 100%; } }
+        
+        .theme-toggle { cursor: pointer; transition: all 0.3s; padding: 10px; border-radius: 50%; background: rgba(0,255,255,0.1); }
+        .theme-toggle:hover { transform: rotate(30deg); background: rgba(0,255,255,0.3); }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 1000; animation: fadeIn 0.3s ease; }
+        .modal-content { position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; background: linear-gradient(135deg, #1a2a3a, #0f1a24); border: 2px solid #00ffff; border-radius: 20px; padding: 25px; animation: slideInModal 0.3s ease; }
+        @keyframes slideInModal { from { opacity: 0; transform: translate(-50%, -60%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .quiz-option { cursor: pointer; transition: all 0.2s; }
+        .quiz-option:hover { background: rgba(0,255,255,0.2); transform: scale(1.01); }
+        
+        input[type="file"] { background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,255,0.3); border-radius: 12px; padding: 10px; color: white; cursor: pointer; width: 100%; }
+        input[type="file"]::file-selector-button { background: linear-gradient(135deg, #00ffff, #0066ff); border: none; border-radius: 8px; padding: 8px 16px; color: white; cursor: pointer; margin-right: 10px; font-family: 'Inter', sans-serif; font-weight: 500; }
+        input[type="file"]::file-selector-button:hover { transform: translateY(-1px); box-shadow: 0 0 10px rgba(0,255,255,0.5); }
+        input[type="radio"] { width: 18px; height: 18px; cursor: pointer; accent-color: #00ffff; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 4px; }
+        
+        @media (max-width: 768px) { .modal-content { width: 95%; padding: 15px; } .cyber-button { padding: 8px 16px; font-size: 14px; } .main-title { font-size: 28px; } }
+    </style>
+</head>
+<body class="dark-mode">
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-black/50 backdrop-blur-lg border-b border-cyan-500/30 sticky top-0 z-50 relative">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center flex-wrap gap-3">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-shield-hooded text-2xl text-cyan-400 animate-pulse"></i>
+                    <h1 class="text-xl font-bold cyber-font glow-text">CYBERVERSE</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="theme-toggle" onclick="toggleTheme()">
+                        <i class="fas fa-sun text-yellow-400 text-xl hidden dark-icon"></i>
+                        <i class="fas fa-moon text-cyan-400 text-xl light-icon"></i>
+                    </div>
+                    <div class="relative group">
+                        <i class="fas fa-user-astronaut text-cyan-400 mr-2"></i>
+                        <span class="text-cyan-300">Welcome,</span>
+                        <span id="usernameDisplay" class="font-bold text-white ml-1"></span>
+                    </div>
+                    <button onclick="logout()" class="text-red-400 hover:text-red-300 transition flex items-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i><span class="hidden md:inline">Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Centered Title -->
+    <div class="text-center py-6 relative z-10">
+        <h1 class="text-4xl md:text-5xl font-bold cyber-font text-white glow-text">CYBERVERSE</h1>
+        <p class="text-cyan-400 text-sm md:text-base mt-2">🔒 Cyber Tools | 🎓 Student Learning | 🛡️ Be a Responsible Citizen</p>
+    </div>
+
+    <div class="container mx-auto px-4 py-4 relative z-10">
+        <!-- Tab Navigation -->
+        <div class="flex space-x-6 mb-8 border-b border-cyan-500/30 pb-3">
+            <button class="nav-link active text-cyan-400 text-lg font-semibold" data-page="cyber-tools">
+                <i class="fas fa-tools mr-2"></i>Cyber Tools
+            </button>
+            <button class="nav-link text-gray-400 text-lg font-semibold" data-page="student-tools">
+                <i class="fas fa-graduation-cap mr-2"></i>Student Tools
+            </button>
+        </div>
+
+        <!-- ===================== CYBER TOOLS PAGE ===================== -->
+        <div id="cyber-tools-page" class="page-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('url-verifier')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-link text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">URL Verifier</h3>
+                    <p class="text-gray-400 text-sm">Check URL safety with SSL, domain age & threat analysis</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('steganography')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-image text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Steganography</h3>
+                    <p class="text-gray-400 text-sm">Hide secrets in images, audio & text with AES-256 encryption</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('password-checker')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-key text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Password Strength</h3>
+                    <p class="text-gray-400 text-sm">Comprehensive password security analysis</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('ip-tracker')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-map-marker-alt text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">IP Tracker</h3>
+                    <p class="text-gray-400 text-sm">Accurate geolocation & ISP detection</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('email-analyzer')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-envelope text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Email Analyzer</h3>
+                    <p class="text-gray-400 text-sm">Detect phishing, malware & suspicious patterns</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('anti-phishing')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-fish text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Anti-Phishing</h3>
+                    <p class="text-gray-400 text-sm">Advanced phishing detection & risk assessment</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('safety-tips')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-shield-alt text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Safety Tips</h3>
+                    <p class="text-gray-400 text-sm">Essential security guidelines & best practices</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('complaints')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-gavel text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Cyber Complaints</h3>
+                    <p class="text-gray-400 text-sm">Government portals & reporting platforms</p>
+                </div>
+                <div class="cyber-card tool-card p-6 relative" onclick="openTool('cyber-laws')">
+                    <div class="absolute top-3 right-3"><span class="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">ACTIVE</span></div>
+                    <i class="fas fa-book text-5xl tool-icon mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Cyber Laws</h3>
+                    <p class="text-gray-400 text-sm">Complete database of cyber laws & punishments</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== STUDENT TOOLS PAGE ===================== -->
+        <div id="student-tools-page" class="page-content hidden">
+            <div class="space-y-8">
+                <!-- Welcome Card -->
+                <div class="cyber-card p-6 text-center">
+                    <i class="fas fa-graduation-cap text-5xl text-cyan-400 mb-3"></i>
+                    <h2 class="text-2xl font-bold mb-2">Your Cybersecurity Learning Hub</h2>
+                    <p class="text-gray-400">Explore career roadmaps, study resources, practice platforms, and test your knowledge</p>
+                </div>
+
+                <!-- Section 1: Cyber Laws (links to Cyber Tools tab) -->
+                <div class="cyber-card p-6 cursor-pointer" onclick="switchToCyberLaws()">
+                    <div class="flex items-center gap-4 mb-3">
+                        <i class="fas fa-gavel text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">📜 Cyber Laws & Regulations</h2>
+                    </div>
+                    <p class="text-gray-400">Complete database of Indian and International cyber laws with punishments and sections</p>
+                    <p class="text-cyan-400 text-sm mt-2"><i class="fas fa-arrow-right mr-1"></i>Click to view in Cyber Tools</p>
+                </div>
+
+                <!-- Section 2: Roadmap Planner -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-road text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">🗺️ Cybersecurity Career Roadmap</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Explore top 15 cybersecurity job roles with skills, qualifications, and salary insights</p>
+                    <div id="roadmapContainer" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Section 3: Study Resources -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-book-open text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">📚 Free Study Resources</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Free cybersecurity PDFs, guides, and learning materials</p>
+                    <div id="resourcesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+
+                <!-- Section 4: Course Suggestions -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-certificate text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">🎓 Recommended Courses</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Free and certified cybersecurity courses for Beginner, Intermediate & Advanced levels</p>
+                    <div id="coursesContainer" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Section 5: Cybersecurity Quiz -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-question-circle text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">📝 Cybersecurity Knowledge Quiz</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Test your knowledge with 20 questions. Score will be displayed after submission.</p>
+                    <div id="quizContainer" class="space-y-4 max-h-96 overflow-y-auto"></div>
+                    <button onclick="submitQuiz()" class="cyber-button w-full mt-4"><i class="fas fa-check-circle mr-2"></i>Submit Quiz</button>
+                    <div id="quizScore" class="mt-4 text-center text-xl font-bold hidden"></div>
+                </div>
+
+                <!-- Section 6: Glossary -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-book text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">📖 Cybersecurity Glossary</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Common cybersecurity terms and their meanings (50+ terms)</p>
+                    <input type="text" id="glossarySearch" placeholder="🔍 Search terms..." class="cyber-input mb-4">
+                    <div id="glossaryContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Section 7: Practice Platforms -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-laptop-code text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">💻 Free Practice Platforms</h2>
+                    </div>
+                    <p class="text-gray-400 mb-4">Free platforms to practice cybersecurity skills and CTF challenges</p>
+                    <div id="platformsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
+
+                <!-- Section 8: Resume Tips -->
+                <div class="cyber-card p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i class="fas fa-file-alt text-4xl text-cyan-400"></i>
+                        <h2 class="text-2xl font-bold">📄 Resume Tips for Cybersecurity</h2>
+                    </div>
+                    <div id="resumeTipsContainer" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tool Modal (Cyber Tools) -->
+    <div id="tool-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-2xl font-bold text-cyan-400"></h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        const username = "{{ username }}";
+        document.getElementById('usernameDisplay').textContent = username;
+
+        // ===================== MATRIX RAIN =====================
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const matrixChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
+        const fontSize = 12;
+        const columns = canvas.width / fontSize;
+        const drops = [];
+        for(let i = 0; i < columns; i++) { drops[i] = 1; }
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0f0';
+            ctx.font = fontSize + 'px monospace';
+            for(let i = 0; i < drops.length; i++) {
+                const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+                if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) { drops[i] = 0; }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50);
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+        // ===================== THEME TOGGLE =====================
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') { document.body.classList.remove('dark-mode'); document.body.classList.add('light-mode'); }
+
+        // ===================== TAB NAVIGATION =====================
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const page = link.dataset.page;
+                document.querySelectorAll('.nav-link').forEach(l => { l.classList.remove('active', 'text-cyan-400'); l.classList.add('text-gray-400'); });
+                link.classList.add('active', 'text-cyan-400');
+                document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+                document.getElementById(`${page}-page`).classList.remove('hidden');
+                if (page === 'student-tools') {
+                    loadStudentTools();
+                }
+            });
+        });
+
+        // ===================== STUDENT TOOLS LOAD ONCE FLAG =====================
+        let studentToolsLoaded = false;
+        function loadStudentTools() {
+            if (studentToolsLoaded) return;
+            studentToolsLoaded = true;
+            loadRoadmap();
+            loadResources();
+            loadCourses();
+            loadQuiz();
+            loadGlossary();
+            loadPlatforms();
+            loadResumeTips();
+        }
+
+        function switchToCyberLaws() {
+            document.querySelectorAll('.nav-link').forEach(l => { l.classList.remove('active', 'text-cyan-400'); l.classList.add('text-gray-400'); });
+            document.querySelector('[data-page="cyber-tools"]').classList.add('active', 'text-cyan-400');
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById('cyber-tools-page').classList.remove('hidden');
+            setTimeout(() => openTool('cyber-laws'), 100);
+        }
+
+        // ===================== CYBER TOOLS - OPEN TOOL MODAL =====================
+        async function openTool(tool) {
+            const modal = document.getElementById('tool-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            modal.style.display = 'block';
+            modalBody.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-2xl"></i> Loading tool...</div>';
+
+            switch(tool) {
+                case 'url-verifier':
+                    modalTitle.innerHTML = '<i class="fas fa-link mr-2"></i>URL Security Verifier';
+                    modalBody.innerHTML = `<div class="space-y-4"><div class="relative"><i class="fas fa-globe absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400"></i><input type="url" id="urlInput" placeholder="Enter URL to verify" class="cyber-input pl-10"></div><button onclick="verifyUrl()" class="cyber-button w-full"><i class="fas fa-shield-alt mr-2"></i>Analyze URL Security</button><div id="urlResult" class="mt-4"></div></div>`;
+                    break;
+                case 'password-checker':
+                    modalTitle.innerHTML = '<i class="fas fa-key mr-2"></i>Password Strength Analyzer';
+                    modalBody.innerHTML = `<div class="space-y-4"><div class="relative"><i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400"></i><input type="password" id="passwordInput" placeholder="Enter password to analyze" class="cyber-input pl-10"></div><button onclick="checkPassword()" class="cyber-button w-full"><i class="fas fa-chart-line mr-2"></i>Check Strength</button><div id="passwordResult" class="mt-4"></div></div>`;
+                    break;
+                case 'ip-tracker':
+                    modalTitle.innerHTML = '<i class="fas fa-map-marker-alt mr-2"></i>IP Geolocation Tracker';
+                    modalBody.innerHTML = `<div class="space-y-4"><div class="relative"><i class="fas fa-network-wired absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400"></i><input type="text" id="ipInput" placeholder="Enter IP address (leave blank for your IP)" class="cyber-input pl-10"></div><button onclick="trackIp()" class="cyber-button w-full"><i class="fas fa-location-dot mr-2"></i>Track Location</button><div id="ipResult" class="mt-4"></div><div id="ipMap" class="mt-4 h-64 bg-black/50 rounded-lg overflow-hidden"></div></div>`;
+                    break;
+                case 'email-analyzer':
+                    modalTitle.innerHTML = '<i class="fas fa-envelope mr-2"></i>Email Threat Analyzer';
+                    modalBody.innerHTML = `<div class="space-y-4"><textarea id="emailContent" rows="8" placeholder="Paste full email content here for comprehensive analysis..." class="cyber-input"></textarea><button onclick="analyzeEmail()" class="cyber-button w-full"><i class="fas fa-bug mr-2"></i>Analyze for Threats</button><div id="emailResult" class="mt-4"></div></div>`;
+                    break;
+                case 'anti-phishing':
+                    modalTitle.innerHTML = '<i class="fas fa-fish mr-2"></i>Anti-Phishing Scanner';
+                    modalBody.innerHTML = `<div class="space-y-4"><div class="relative"><i class="fas fa-exclamation-triangle absolute left-3 top-1/2 transform -translate-y-1/2 text-cyan-400"></i><input type="url" id="phishUrl" placeholder="Enter website URL to scan for phishing" class="cyber-input pl-10"></div><button onclick="checkPhishing()" class="cyber-button w-full"><i class="fas fa-search mr-2"></i>Scan Website</button><div id="phishResult" class="mt-4"></div></div>`;
+                    break;
+                case 'safety-tips':
+                    modalTitle.innerHTML = '<i class="fas fa-shield-alt mr-2"></i>Security Safety Guide';
+                    modalBody.innerHTML = `<div id="safetyTipsContent" class="space-y-4"></div>`;
+                    loadSafetyTips();
+                    break;
+                case 'complaints':
+                    modalTitle.innerHTML = '<i class="fas fa-gavel mr-2"></i>Cyber Crime Reporting Portals';
+                    modalBody.innerHTML = `<div id="complaintsContent" class="space-y-3"></div>`;
+                    loadComplaintPortals();
+                    break;
+                case 'cyber-laws':
+                    modalTitle.innerHTML = '<i class="fas fa-book mr-2"></i>Cyber Law Database';
+                    modalBody.innerHTML = `<div id="lawsContent" class="space-y-4"></div>`;
+                    loadCyberLaws();
+                    break;
+                case 'steganography':
+                    modalTitle.innerHTML = '<i class="fas fa-image mr-2"></i>Advanced Steganography Suite';
+                    modalBody.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="bg-black/30 rounded-lg p-4">
+                                <label class="block text-cyan-400 font-bold mb-3">Select Media Type:</label>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <label class="flex items-center cursor-pointer p-2 bg-black/40 rounded hover:bg-cyan-500/20 transition"><input type="radio" name="fileType" value="image" checked class="mr-2 text-cyan-400" onchange="toggleFileType()"><i class="fas fa-image mr-1"></i> Image</label>
+                                    <label class="flex items-center cursor-pointer p-2 bg-black/40 rounded hover:bg-cyan-500/20 transition"><input type="radio" name="fileType" value="audio" class="mr-2 text-cyan-400" onchange="toggleFileType()"><i class="fas fa-music mr-1"></i> Audio</label>
+                                    <label class="flex items-center cursor-pointer p-2 bg-black/40 rounded hover:bg-cyan-500/20 transition"><input type="radio" name="fileType" value="text" class="mr-2 text-cyan-400" onchange="toggleFileType()"><i class="fas fa-file-alt mr-1"></i> Text</label>
+                                </div>
+                                <p id="fileTypeHint" class="text-xs text-gray-500 mt-3"><i class="fas fa-info-circle"></i> Supported: Images (PNG, JPG, BMP) | Audio (WAV) | Text (TXT)</p>
+                            </div>
+                            <div class="border-b border-cyan-500/30 pb-6">
+                                <h3 class="text-lg font-bold mb-4 text-cyan-400"><i class="fas fa-lock mr-2"></i>Hide Secret Message (Encode)</h3>
+                                <div class="space-y-4">
+                                    <div><label class="block text-gray-300 mb-2">Select Carrier File:</label><input type="file" id="encodeFile" accept=".png,.jpg,.jpeg,.bmp,.wav,.txt,.bin" class="cyber-input"><p id="carrierHint" class="text-xs text-gray-500 mt-1">Choose the file that will hide your secret message</p></div>
+                                    <div><label class="block text-gray-300 mb-2">Secret Message:</label><textarea id="secretMessage" rows="4" placeholder="Enter the secret message you want to hide..." class="cyber-input"></textarea></div>
+                                    <div><label class="block text-gray-300 mb-2">Encryption Password:</label><input type="password" id="encodePassword" placeholder="Create a strong password (AES-256 encryption)" class="cyber-input"><p class="text-xs text-yellow-400 mt-1">⚠️ REMEMBER THIS PASSWORD! You'll need it to extract the message.</p></div>
+                                    <button onclick="encodeMessageAdvanced(event)" class="cyber-button w-full"><i class="fas fa-download mr-2"></i>Encode & Download Stego File</button>
+                                    <div id="encodeStatus" class="hidden"></div>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <h3 class="text-lg font-bold mb-4 text-cyan-400"><i class="fas fa-unlock mr-2"></i>Extract Hidden Message (Decode)</h3>
+                                <div class="space-y-4">
+                                    <div><label class="block text-gray-300 mb-2">Select Stego File:</label><input type="file" id="decodeFile" accept=".png,.jpg,.jpeg,.bmp,.wav,.txt,.bin" class="cyber-input"><p class="text-xs text-gray-500 mt-1">The file containing the hidden message</p></div>
+                                    <div><label class="block text-gray-300 mb-2">Decryption Password:</label><input type="password" id="decodePassword" placeholder="Enter the password used during encoding" class="cyber-input"></div>
+                                    <button onclick="decodeMessageAdvanced(event)" class="cyber-button w-full"><i class="fas fa-search mr-2"></i>Extract Hidden Message</button>
+                                    <div id="decodedMessage" class="mt-4 hidden"></div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 text-center border-t border-cyan-500/30 pt-4"><i class="fas fa-shield-alt mr-1"></i> AES-256-GCM Encryption | LSB Steganography | Supports 3 Media Types</div>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        // ===================== STEGANOGRAPHY FUNCTIONS =====================
+        window.toggleFileType = function() {
+            const fileType = document.querySelector('input[name="fileType"]:checked').value;
+            const fileInput = document.getElementById('encodeFile');
+            const hint = document.getElementById('carrierHint');
+            const acceptMap = { 'image': '.png,.jpg,.jpeg,.bmp', 'audio': '.wav', 'text': '.txt,.bin' };
+            const hintMap = { 'image': 'Choose an image file (PNG, JPG, BMP) to hide your secret message', 'audio': 'Choose a WAV audio file to hide your secret message', 'text': 'Choose a text file to hide your secret message' };
+            fileInput.accept = acceptMap[fileType];
+            hint.innerHTML = hintMap[fileType];
+        };
+
+        window.encodeMessageAdvanced = async function(event) {
+            const fileType = document.querySelector('input[name="fileType"]:checked').value;
+            const fileInput = document.getElementById('encodeFile');
+            const message = document.getElementById('secretMessage').value;
+            const password = document.getElementById('encodePassword').value;
+            const statusDiv = document.getElementById('encodeStatus');
+            if (!fileInput.files || !fileInput.files[0]) { alert('Please select a carrier file'); return; }
+            if (!message) { alert('Please enter a secret message'); return; }
+            if (!password) { alert('Please create an encryption password'); return; }
+            const formData = new FormData();
+            formData.append('carrier', fileInput.files[0]);
+            formData.append('payloadText', message);
+            formData.append('password', password);
+            formData.append('fileType', fileType);
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>ENCODING...';
+            button.disabled = true;
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = '<div class="text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Processing... (This may take a moment)</div>';
+            try {
+                const response = await fetch('/embed', { method: 'POST', body: formData });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    let filename = 'stego_file';
+                    if (fileType === 'image') filename = 'stego_image.png';
+                    else if (fileType === 'audio') filename = 'stego_audio.wav';
+                    else filename = 'stego_text.txt';
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    statusDiv.innerHTML = `<div class="bg-green-500/20 border border-green-500 rounded-lg p-3"><i class="fas fa-check-circle text-green-400 mr-2"></i><span class="text-green-400">✓ Success! File downloaded as ${filename}</span><p class="text-xs text-gray-400 mt-2">Remember your password to extract the message!</p></div>`;
+                    document.getElementById('secretMessage').value = '';
+                    document.getElementById('encodePassword').value = '';
+                    setTimeout(() => statusDiv.classList.add('hidden'), 5000);
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-3"><i class="fas fa-exclamation-circle text-red-400 mr-2"></i><span class="text-red-400">Error: ${error.error || 'Encoding failed'}</span></div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-3"><i class="fas fa-exclamation-circle text-red-400 mr-2"></i><span class="text-red-400">Error: ${error.message}</span></div>`;
+            } finally { button.innerHTML = originalText; button.disabled = false; }
+        };
+
+        window.decodeMessageAdvanced = async function(event) {
+            const fileType = document.querySelector('input[name="fileType"]:checked').value;
+            const fileInput = document.getElementById('decodeFile');
+            const password = document.getElementById('decodePassword').value;
+            const decodedDiv = document.getElementById('decodedMessage');
+            if (!fileInput.files || !fileInput.files[0]) { alert('Please select a stego file'); return; }
+            if (!password) { alert('Please enter the decryption password'); return; }
+            const formData = new FormData();
+            formData.append('stegoFile', fileInput.files[0]);
+            formData.append('password', password);
+            formData.append('fileType', fileType);
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>DECODING...';
+            button.disabled = true;
+            decodedDiv.classList.remove('hidden');
+            decodedDiv.innerHTML = '<div class="text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Extracting hidden message...</div>';
+            try {
+                const response = await fetch('/extract', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok && data.text) {
+                    decodedDiv.innerHTML = `<div class="bg-green-500/20 border border-green-500 rounded-lg p-4"><div class="flex items-start gap-3"><i class="fas fa-check-circle text-green-400 text-xl mt-1"></i><div class="flex-1"><p class="font-bold text-green-400 mb-2">Hidden Message Extracted:</p><div class="bg-black/50 p-4 rounded-lg font-mono text-sm break-all max-h-60 overflow-y-auto">${escapeHtml(data.text)}</div><p class="text-xs text-gray-400 mt-3">✓ Message successfully decrypted with AES-256-GCM</p></div></div></div>`;
+                } else {
+                    decodedDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-4"><div class="flex items-start gap-3"><i class="fas fa-exclamation-circle text-red-400 text-xl mt-1"></i><div><p class="font-bold text-red-400 mb-2">Extraction Failed</p><p class="text-sm text-gray-300">${data.error || 'Invalid password or no hidden message found'}</p><p class="text-xs text-gray-400 mt-2">⚠️ Make sure you have the correct password and file type</p></div></div></div>`;
+                }
+            } catch (error) {
+                decodedDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-4"><div class="flex items-start gap-3"><i class="fas fa-exclamation-circle text-red-400 text-xl mt-1"></i><div><p class="font-bold text-red-400 mb-2">Error</p><p class="text-sm text-gray-300">${error.message}</p></div></div></div>`;
+            } finally { button.innerHTML = originalText; button.disabled = false; }
+        };
+
+        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+
+        // ===================== CYBER TOOLS API FUNCTIONS =====================
+        async function verifyUrl() {
+            const url = document.getElementById('urlInput').value;
+            if (!url) { alert('Please enter a URL'); return; }
+            const resultDiv = document.getElementById('urlResult');
+            resultDiv.innerHTML = '<div class="text-center text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Scanning URL...</div>';
+            try {
+                const response = await fetch('/api/verify-url', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url}) });
+                const data = await response.json();
+                if (data.error) { resultDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error: ${data.error}</div>`; return; }
+                let checksHtml = '';
+                data.security_checks.forEach(check => { checksHtml += `<div class="flex justify-between items-center py-2 border-b border-gray-700"><span>${check.name}</span><span class="${check.passed ? 'text-green-400' : 'text-red-400'}">${check.message}</span></div>`; });
+                resultDiv.innerHTML = `<div class="bg-${data.color}-500/20 border-2 border-${data.color}-500 rounded-lg p-4"><div class="text-center mb-4"><i class="fas ${data.icon} text-5xl text-${data.color}-400 mb-2"></i><div class="text-3xl font-bold text-${data.color}-400">${data.status}</div><div class="text-sm mt-1">Safety Score: ${data.safety_score}/100</div><div class="w-full bg-gray-700 rounded-full h-3 mt-2"><div class="bg-${data.color}-500 rounded-full h-3" style="width: ${data.safety_score}%"></div></div></div><p class="font-bold mb-2">${data.message}</p><p class="text-sm text-gray-300 mb-3">${data.details}</p><div class="border-t border-cyan-500/30 pt-3 mt-2"><p class="font-bold mb-2">Security Analysis:</p>${checksHtml}</div><div class="mt-3 text-xs text-gray-400"><i class="fas fa-info-circle mr-1"></i> Domain: ${data.domain}</div></div>`;
+            } catch (error) { resultDiv.innerHTML = '<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error analyzing URL</div>'; }
+        }
+
+        async function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) { alert('Please enter a password'); return; }
+            const resultDiv = document.getElementById('passwordResult');
+            resultDiv.innerHTML = '<div class="text-center text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing password...</div>';
+            try {
+                const response = await fetch('/api/check-password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password}) });
+                const data = await response.json();
+                let feedbackHtml = '';
+                data.feedback.forEach(f => { let color = f.includes('✓') ? 'text-green-400' : (f.includes('⚠️') ? 'text-yellow-400' : 'text-red-400'); feedbackHtml += `<li class="${color} text-sm mb-1">${f}</li>`; });
+                resultDiv.innerHTML = `<div class="bg-${data.color}-500/20 border-2 border-${data.color}-500 rounded-lg p-4"><div class="text-center mb-3"><div class="text-4xl font-bold text-${data.color}-400">${data.strength}</div><div class="text-sm mt-1">Score: ${data.score}/100</div><div class="w-full bg-gray-700 rounded-full h-2 mt-2"><div class="bg-${data.color}-500 rounded-full h-2" style="width: ${data.score}%"></div></div></div><p class="mb-2">${data.message}</p><p class="text-sm text-gray-400 mb-3">Estimated crack time: ${data.time_to_crack}</p><div class="border-t border-cyan-500/30 pt-3"><p class="font-bold mb-2">Analysis Details:</p><ul class="space-y-1">${feedbackHtml}</ul></div><div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-400"><div>Length: ${data.length} chars</div><div>Character types: ${data.variety_count}/4</div></div></div>`;
+            } catch (error) { resultDiv.innerHTML = '<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error analyzing password</div>'; }
+        }
+
+        async function trackIp() {
+            const ip = document.getElementById('ipInput').value;
+            const resultDiv = document.getElementById('ipResult');
+            resultDiv.innerHTML = '<div class="text-center text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Tracking IP...</div>';
+            try {
+                const response = await fetch('/api/track-ip', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ip: ip || ''}) });
+                const data = await response.json();
+                if (data.error) { resultDiv.innerHTML = `<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error: ${data.error}</div>`; return; }
+                resultDiv.innerHTML = `<div class="bg-cyan-500/20 border border-cyan-500 rounded-lg p-4"><div class="grid grid-cols-2 gap-2 text-sm"><p class="font-bold">IP Address:</p><p class="font-mono">${data.ip}</p><p class="font-bold">Location:</p><p>${data.city}, ${data.region}, ${data.country}</p><p class="font-bold">ISP:</p><p>${data.isp}</p><p class="font-bold">Organization:</p><p>${data.organization}</p><p class="font-bold">Timezone:</p><p>${data.timezone}</p></div></div>`;
+                if (data.latitude && data.longitude) { document.getElementById('ipMap').innerHTML = `<iframe width="100%" height="100%" frameborder="0" style="border-radius: 8px;" src="https://www.openstreetmap.org/export/embed.html?bbox=${data.longitude-0.05},${data.latitude-0.05},${data.longitude+0.05},${data.latitude+0.05}&layer=mapnik&marker=${data.latitude},${data.longitude}"></iframe>`; }
+            } catch (error) { resultDiv.innerHTML = '<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error tracking IP</div>'; }
+        }
+
+        async function analyzeEmail() {
+            const email = document.getElementById('emailContent').value;
+            if (!email) { alert('Please paste email content'); return; }
+            const resultDiv = document.getElementById('emailResult');
+            resultDiv.innerHTML = '<div class="text-center text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Analyzing email...</div>';
+            try {
+                const response = await fetch('/api/analyze-email', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email}) });
+                const data = await response.json();
+                let threatsHtml = '';
+                data.threat_indicators.forEach(indicator => { threatsHtml += `<div class="flex justify-between items-center py-2 border-b border-gray-700"><span><i class="fas fa-bug mr-2 text-yellow-400"></i>${indicator.type}</span><span class="text-${indicator.severity === 'CRITICAL' ? 'red' : 'yellow'}-400 text-sm">${indicator.severity}</span></div><p class="text-xs text-gray-400 mt-1 mb-2">${indicator.description}</p>`; });
+                resultDiv.innerHTML = `<div class="bg-${data.color}-500/20 border-2 border-${data.color}-500 rounded-lg p-4"><div class="text-center mb-3"><div class="text-2xl font-bold text-${data.color}-400">${data.status}</div><div class="text-sm mt-1">Threat Level: ${data.threat_level}</div><div class="text-sm">Risk Score: ${data.risk_score}%</div><div class="w-full bg-gray-700 rounded-full h-2 mt-2"><div class="bg-${data.color}-500 rounded-full h-2" style="width: ${data.risk_score}%"></div></div></div><p class="mb-2">${data.message}</p><p class="text-sm text-yellow-400 mb-3">${data.action}</p>${threatsHtml ? `<div class="border-t border-cyan-500/30 pt-3 mt-2"><p class="font-bold mb-2">Detected Threats:</p>${threatsHtml}</div>` : ''}</div>`;
+            } catch (error) { resultDiv.innerHTML = '<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error analyzing email</div>'; }
+        }
+
+        async function checkPhishing() {
+            const url = document.getElementById('phishUrl').value;
+            if (!url) { alert('Please enter a URL'); return; }
+            const resultDiv = document.getElementById('phishResult');
+            resultDiv.innerHTML = '<div class="text-center text-cyan-400"><i class="fas fa-spinner fa-spin mr-2"></i>Scanning for phishing indicators...</div>';
+            try {
+                const response = await fetch('/api/check-phishing', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url}) });
+                const data = await response.json();
+                let risksHtml = '';
+                data.risk_factors.forEach(factor => { risksHtml += `<div class="mb-3"><div class="flex justify-between items-center"><span class="font-bold">${factor.type}</span><span class="text-${factor.risk === 'HIGH' ? 'red' : 'yellow'}-400">${factor.risk} RISK</span></div><p class="text-xs text-gray-400">${factor.description}</p><p class="text-xs text-gray-500 mt-1">${factor.impact}</p></div>`; });
+                resultDiv.innerHTML = `<div class="bg-${data.color}-500/20 border-2 border-${data.color}-500 rounded-lg p-4"><div class="text-center mb-3"><i class="fas ${data.icon} text-5xl text-${data.color}-400 mb-2"></i><div class="text-2xl font-bold text-${data.color}-400">${data.status}</div><div class="text-sm mt-1">Risk Level: ${data.risk_level}</div><div class="text-sm">Phishing Score: ${data.phishing_score}/100</div><div class="w-full bg-gray-700 rounded-full h-2 mt-2"><div class="bg-${data.color}-500 rounded-full h-2" style="width: ${data.phishing_score}%"></div></div></div><p class="mb-2">${data.message}</p><p class="text-sm text-yellow-400 mb-3">${data.recommendation}</p>${risksHtml ? `<div class="border-t border-cyan-500/30 pt-3 mt-2"><p class="font-bold mb-2">Risk Factors:</p>${risksHtml}</div>` : ''}<div class="mt-3 text-xs text-gray-400"><i class="fas fa-globe mr-1"></i> Domain: ${data.domain}</div></div>`;
+            } catch (error) { resultDiv.innerHTML = '<div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-400">Error scanning website</div>'; }
+        }
+
+        async function loadSafetyTips() {
+            try {
+                const response = await fetch('/api/safety-tips');
+                const data = await response.json();
+                let html = '';
+                data.categories.forEach(cat => { html += `<div class="bg-black/30 rounded-lg p-4 border-l-4 border-${cat.color}-500"><h3 class="text-lg font-bold text-${cat.color}-400 mb-3"><i class="fas ${cat.icon} mr-2"></i>${cat.title}</h3><div class="space-y-3">`; cat.tips.forEach(tip => { let priorityColor = tip.priority === 'Critical' ? 'text-red-400' : (tip.priority === 'High' ? 'text-orange-400' : 'text-yellow-400'); html += `<div><div class="flex items-center justify-between"><span class="font-bold text-sm">${tip.title}</span><span class="${priorityColor} text-xs">${tip.priority}</span></div><p class="text-xs text-gray-300 mt-1">${tip.description}</p></div>`; }); html += `</div></div>`; });
+                document.getElementById('safetyTipsContent').innerHTML = html;
+            } catch (error) { document.getElementById('safetyTipsContent').innerHTML = '<div class="text-red-400">Error loading safety tips</div>'; }
+        }
+
+        async function loadComplaintPortals() {
+            try {
+                const response = await fetch('/api/complaint-portals');
+                const data = await response.json();
+                let html = '<h3 class="text-lg font-bold text-cyan-400 mb-3">🇮🇳 Indian Government Portals</h3>';
+                data.indian_portals.forEach(portal => { html += `<div class="bg-black/30 rounded-lg p-4 hover:bg-black/50 transition border border-cyan-500/30"><div class="flex items-center justify-between mb-2"><h3 class="text-lg font-bold text-cyan-400">${portal.name}</h3><span class="text-xs bg-cyan-500/20 px-2 py-1 rounded">${portal.type}</span></div><p class="text-sm text-gray-300 mb-2">${portal.description}</p>${portal.hotline ? `<p class="text-xs text-yellow-400 mb-2"><i class="fas fa-phone-alt mr-1"></i>Helpline: ${portal.hotline}</p>` : ''}<a href="${portal.url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm inline-flex items-center"><i class="fas fa-external-link-alt mr-1"></i>Visit Portal</a></div>`; });
+                html += '<h3 class="text-lg font-bold text-cyan-400 mb-3 mt-6">🌍 International Portals</h3>';
+                data.international_portals.forEach(portal => { html += `<div class="bg-black/30 rounded-lg p-4 hover:bg-black/50 transition border border-cyan-500/30"><div class="flex items-center justify-between mb-2"><h3 class="text-lg font-bold text-cyan-400">${portal.name}</h3><span class="text-xs bg-cyan-500/20 px-2 py-1 rounded">${portal.type}</span></div><p class="text-sm text-gray-300 mb-2">${portal.description}</p><a href="${portal.url}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm inline-flex items-center"><i class="fas fa-external-link-alt mr-1"></i>Visit Portal</a></div>`; });
+                document.getElementById('complaintsContent').innerHTML = html;
+            } catch (error) { document.getElementById('complaintsContent').innerHTML = '<div class="text-red-400">Error loading complaint portals</div>'; }
+        }
+
+        async function loadCyberLaws() {
+            try {
+                const response = await fetch('/api/cyber-laws');
+                const data = await response.json();
+                let html = '';
+                data.categories.forEach(category => { html += `<div class="mb-6"><h3 class="text-xl font-bold text-cyan-400 mb-3"><i class="fas ${category.icon} mr-2"></i>${category.name}</h3><div class="space-y-3">`; category.laws.forEach(law => { let severityColor = law.severity === 'Critical' ? 'bg-red-500/20 border-red-500' : (law.severity === 'High' ? 'bg-orange-500/20 border-orange-500' : 'bg-yellow-500/20 border-yellow-500'); html += `<div class="bg-black/30 rounded-lg p-4 border-l-4 ${severityColor}"><div class="flex justify-between items-start mb-2"><h4 class="font-bold text-cyan-300">${law.section}</h4><span class="text-xs px-2 py-1 rounded ${severityColor}">${law.severity}</span></div><p class="font-bold text-sm mb-1">${law.title}</p><p class="text-xs text-gray-300 mb-2">${law.description}</p><div class="bg-red-500/20 rounded p-2 mt-1"><p class="text-xs font-bold text-red-400"><i class="fas fa-gavel mr-1"></i>Punishment: ${law.punishment}</p></div></div>`; }); html += `</div></div>`; });
+                document.getElementById('lawsContent').innerHTML = html;
+            } catch (error) { document.getElementById('lawsContent').innerHTML = '<div class="text-red-400">Error loading cyber laws</div>'; }
+        }
+
+        // ===================== STUDENT TOOLS FUNCTIONS =====================
+        async function loadRoadmap() {
+            const res = await fetch('/api/roadmap-data');
+            const roles = await res.json();
+            let html = '';
+            roles.forEach(role => {
+                html += `
+                    <div class="bg-black/30 rounded-lg p-4 border-l-4 border-cyan-500">
+                        <div class="flex justify-between items-center cursor-pointer" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                            <span class="font-bold text-cyan-400 text-lg">${role.title}</span>
+                            <span class="text-sm text-green-400">💰 ${role.salary}</span>
+                        </div>
+                        <div class="hidden mt-3 space-y-2 text-sm">
+                            <p><span class="text-cyan-400">📚 Qualifications:</span> ${role.qualifications}</p>
+                            <p><span class="text-green-400">🔰 Basic Skills:</span> ${role.basic}</p>
+                            <p><span class="text-yellow-400">⚡ Intermediate Skills:</span> ${role.intermediate}</p>
+                            <p><span class="text-red-400">🚀 Advanced Skills:</span> ${role.advanced}</p>
+                            <p><span class="text-purple-400">📝 Role Description:</span> ${role.description}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('roadmapContainer').innerHTML = html;
+        }
+
+        async function loadResources() {
+            const res = await fetch('/api/resources-data');
+            const resources = await res.json();
+            let html = '';
+            resources.forEach(r => {
+                html += `
+                    <a href="${r.url}" target="_blank" class="bg-black/30 rounded-lg p-3 hover:bg-cyan-500/20 transition flex items-center gap-2 group">
+                        <i class="fas fa-file-pdf text-red-400 text-xl"></i>
+                        <div class="flex-1">
+                            <span class="font-medium">${r.title}</span>
+                            <span class="text-xs text-gray-500 ml-2">${r.size || ''}</span>
+                        </div>
+                        <i class="fas fa-external-link-alt text-xs text-gray-500 group-hover:text-cyan-400"></i>
+                    </a>
+                `;
+            });
+            document.getElementById('resourcesContainer').innerHTML = html;
+        }
+
+        async function loadCourses() {
+            const res = await fetch('/api/courses-data');
+            const courses = await res.json();
+            let html = '';
+            courses.forEach(c => {
+                const levelColor = c.level === 'Beginner' ? 'bg-green-500/20 text-green-400' :
+                                  c.level === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-red-500/20 text-red-400';
+                html += `
+                    <a href="${c.url}" target="_blank" class="bg-black/30 rounded-lg p-3 hover:bg-cyan-500/20 transition block">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <span class="font-bold">${c.title}</span>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="text-xs px-2 py-0.5 rounded ${levelColor}">${c.level}</span>
+                                    <span class="text-xs text-gray-500">${c.platform}</span>
+                                    <span class="text-xs text-green-400">${c.certification}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">📅 ${c.duration}</p>
+                            </div>
+                            <i class="fas fa-external-link-alt text-xs text-gray-500"></i>
+                        </div>
+                    </a>
+                `;
+            });
+            document.getElementById('coursesContainer').innerHTML = html;
+        }
+
+        let quizQuestions = [];
+        async function loadQuiz() {
+            const res = await fetch('/api/quiz-questions');
+            quizQuestions = await res.json();
+            let html = '';
+            quizQuestions.forEach((q, idx) => {
+                html += `
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <p class="font-bold mb-3">${idx+1}. ${q.question}</p>
+                        <div class="space-y-2 pl-4">
+                `;
+                q.options.forEach((opt, optIdx) => {
+                    html += `
+                        <label class="flex items-center space-x-3 p-2 rounded quiz-option cursor-pointer">
+                            <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4 text-cyan-400">
+                            <span class="text-gray-300">${opt}</span>
+                        </label>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+            document.getElementById('quizContainer').innerHTML = html;
+        }
+
+        function submitQuiz() {
+            let score = 0;
+            quizQuestions.forEach((q, idx) => {
+                const selected = document.querySelector(`input[name="q${idx}"]:checked`);
+                if(selected && parseInt(selected.value) === q.correct) score++;
+            });
+            const percentage = Math.round((score / quizQuestions.length) * 100);
+            const scoreDiv = document.getElementById('quizScore');
+            scoreDiv.classList.remove('hidden');
+            let grade = percentage >= 80 ? '🏆 Excellent! You\'re a Cybersecurity Pro!' :
+                        percentage >= 60 ? '👍 Good! Keep Learning!' :
+                        percentage >= 40 ? '📚 Keep Studying! You\'re Getting There!' :
+                        '💪 Need More Practice! Review the materials above.';
+            let message = percentage >= 80 ? '🎉 Outstanding performance!' :
+                          percentage >= 60 ? '🌟 Great effort! Review the topics you missed.' :
+                          '📖 Start with beginner courses and practice platforms.';
+            scoreDiv.innerHTML = `
+                <div class="bg-cyan-500/20 border-2 border-cyan-500 rounded-lg p-4">
+                    <div class="text-3xl font-bold text-cyan-400">${score}/${quizQuestions.length}</div>
+                    <div class="text-lg mt-1">${percentage}% - ${grade}</div>
+                    <p class="text-sm text-gray-300 mt-2">${message}</p>
+                    <div class="w-full bg-gray-700 rounded-full h-2 mt-3">
+                        <div class="bg-cyan-500 rounded-full h-2" style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            `;
+            fetch('/api/save-quiz-result', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({score: score, total: quizQuestions.length})
+            }).catch(e => console.log('Quiz result saved locally'));
+        }
+
+        let glossaryTerms = [];
+        async function loadGlossary() {
+            const res = await fetch('/api/glossary-data');
+            glossaryTerms = await res.json();
+            displayGlossary();
+            document.getElementById('glossarySearch').addEventListener('input', (e) => {
+                const search = e.target.value.toLowerCase();
+                const filtered = glossaryTerms.filter(t => t.term.toLowerCase().includes(search) || t.meaning.toLowerCase().includes(search));
+                displayGlossary(filtered);
+            });
+        }
+        function displayGlossary(terms = glossaryTerms) {
+            let html = '';
+            terms.forEach(t => {
+                html += `
+                    <div class="bg-black/30 rounded-lg p-3 hover:bg-cyan-500/10 transition">
+                        <span class="font-bold text-cyan-400 text-lg">${t.term}</span>
+                        <p class="text-sm text-gray-300 mt-1">${t.meaning}</p>
+                    </div>
+                `;
+            });
+            document.getElementById('glossaryContainer').innerHTML = html || '<div class="text-center text-gray-400 col-span-2">No terms found</div>';
+        }
+
+        async function loadPlatforms() {
+            const res = await fetch('/api/practice-platforms');
+            const platforms = await res.json();
+            let html = '';
+            platforms.forEach(p => {
+                const diffColor = p.difficulty === 'Beginner' ? 'text-green-400' :
+                                  p.difficulty === 'Beginner-Intermediate' ? 'text-green-400' :
+                                  p.difficulty === 'Intermediate-Advanced' ? 'text-yellow-400' : 'text-red-400';
+                html += `
+                    <a href="${p.url}" target="_blank" class="bg-black/30 rounded-lg p-3 hover:bg-cyan-500/20 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="font-bold text-cyan-400">${p.name}</span>
+                                <p class="text-xs text-gray-400 mt-1">${p.description}</p>
+                                <div class="flex gap-2 mt-2">
+                                    <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 ${diffColor}">${p.difficulty}</span>
+                                    <span class="text-xs text-gray-500">${p.type}</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-external-link-alt text-xs text-gray-500"></i>
+                        </div>
+                    </a>
+                `;
+            });
+            document.getElementById('platformsContainer').innerHTML = html;
+        }
+
+        async function loadResumeTips() {
+            const res = await fetch('/api/resume-tips');
+            const tips = await res.json();
+            let html = `
+                <div class="bg-black/30 rounded-lg p-4">
+                    <h3 class="font-bold text-cyan-400 mb-3"><i class="fas fa-key mr-2"></i>🔑 Key Skills to Include</h3>
+                    <div class="flex flex-wrap gap-2">
+                        ${tips.key_skills.map(s => `<span class="px-3 py-1 bg-cyan-500/20 rounded-full text-sm">${s}</span>`).join('')}
+                    </div>
+                </div>
+                <div class="bg-black/30 rounded-lg p-4">
+                    <h3 class="font-bold text-cyan-400 mb-3"><i class="fas fa-layer-group mr-2"></i>📋 Resume Structure</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-300">
+                        ${tips.structure.map(s => `<li>${s}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="bg-black/30 rounded-lg p-4">
+                    <h3 class="font-bold text-cyan-400 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>❌ Common Mistakes to Avoid</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-300">
+                        ${tips.common_mistakes.map(m => `<li>${m}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="bg-black/30 rounded-lg p-4">
+                    <h3 class="font-bold text-cyan-400 mb-3"><i class="fas fa-bolt mr-2"></i>💪 Action Words to Use</h3>
+                    <div class="flex flex-wrap gap-2">
+                        ${tips.action_words.map(w => `<span class="px-3 py-1 bg-green-500/20 rounded-full text-sm">${w}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('resumeTipsContainer').innerHTML = html;
+        }
+
+        // ===================== MODAL & UTILITY =====================
+        function closeModal() { document.getElementById('tool-modal').style.display = 'none'; }
+        function logout() { window.location.href = '/logout'; }
+        window.onclick = function(event) {
+            const modal = document.getElementById('tool-modal');
+            if (event.target === modal) { modal.style.display = 'none'; }
+        }
+    </script>
+</body>
+</html>
